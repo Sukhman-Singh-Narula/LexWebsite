@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* FullCalendar Dark Mode Styles */
+.fc-dark {
+  --fc-border-color: theme('colors.gray.700');
+  --fc-button-bg-color: theme('colors.gray.700');
+  --fc-button-border-color: theme('colors.gray.600');
+  --fc-button-hover-bg-color: theme('colors.gray.600');
+  --fc-button-hover-border-color: theme('colors.gray.500');
+  --fc-button-active-bg-color: theme('colors.gray.600');
+  --fc-button-active-border-color: theme('colors.gray.500');
+  --fc-event-bg-color: theme('colors.indigo.600');
+  --fc-event-border-color: theme('colors.indigo.500');
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: theme('colors.gray.700');
+  --fc-neutral-text-color: theme('colors.gray.300');
+  --fc-today-bg-color: theme('colors.gray.700/30');
+}
+
+.dark .fc {
+  color: theme('colors.gray.300');
+}
+
+.dark .fc-button {
+  color: theme('colors.gray.300') !important;
+}
+
+.dark .fc-day-today {
+  background-color: theme('colors.gray.700/30') !important;
+}
+
+.dark .fc-scrollgrid {
+  border-color: theme('colors.gray.700') !important;
+}
+
+.dark .fc td,
+.dark .fc th {
+  border-color: theme('colors.gray.700') !important;
+}
+
+.dark .fc-theme-standard .fc-scrollgrid {
+  border-color: theme('colors.gray.700');
+}
+
+.dark .fc-col-header-cell {
+  background-color: theme('colors.gray.800');
+  border-color: theme('colors.gray.700') !important;
+}
+
+.dark .fc-theme-standard td,
+.dark .fc-theme-standard th {
+  border-color: theme('colors.gray.700');
+}
