@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckSquare, Square, Trash2, Upload, Plus, X } from 'lucide-react';
+import { CheckSquare, Trash2, Upload, Plus, X } from 'lucide-react';
 
 interface Task {
   id: string;
