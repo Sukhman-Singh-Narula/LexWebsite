@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Search, Bell, User, Moon, Sun } from 'lucide-react';
+import { Search, Bell, User, Moon, Sun, LogOut } from 'lucide-react';
 
 interface NavbarProps {
   pageTitle: string;
   darkMode: boolean;
   onDarkModeToggle: () => void;
+  onLogout: () => void;
 }
 
-export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: NavbarProps) {
+export default function Navbar({ pageTitle, darkMode, onDarkModeToggle, onLogout }: NavbarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -19,8 +20,8 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
 
   return (
     <div className={`h-16 flex items-center justify-between px-4 fixed top-0 right-0 left-64 z-10 backdrop-blur-sm transition-colors duration-300
-      ${darkMode 
-        ? 'bg-gray-800/90 border-gray-700' 
+      ${darkMode
+        ? 'bg-gray-800/90 border-gray-700'
         : 'bg-white/90 border-gray-200'} border-b`}>
       <div className="flex items-center gap-4">
         <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -40,8 +41,8 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
             type="text"
             placeholder="Search cases, clients, or documents..."
             className={`w-full px-4 py-2 pl-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e8c4b8] transition-all duration-300
-              ${darkMode 
-                ? 'bg-gray-700 text-white placeholder-gray-400' 
+              ${darkMode
+                ? 'bg-gray-700 text-white placeholder-gray-400'
                 : 'bg-gray-50 text-gray-900'}`}
           />
           <Search className={`absolute left-3 top-2.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={20} />
@@ -52,29 +53,29 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
         <button
           onClick={onDarkModeToggle}
           className={`p-2 rounded-full transition-colors duration-300
-            ${darkMode 
-              ? 'hover:bg-gray-700 text-gray-300' 
+            ${darkMode
+              ? 'hover:bg-gray-700 text-gray-300'
               : 'hover:bg-gray-100 text-gray-600'}`}
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
         <div className="relative">
-          <button 
+          <button
             className={`p-2 rounded-full relative transition-colors duration-300
-              ${darkMode 
-                ? 'hover:bg-gray-700 text-gray-300' 
+              ${darkMode
+                ? 'hover:bg-gray-700 text-gray-300'
                 : 'hover:bg-gray-100 text-gray-600'}`}
             onClick={() => setShowNotifications(!showNotifications)}
           >
             <Bell size={20} />
             <span className="absolute top-1 right-1 w-2 h-2 bg-[#e8c4b8] rounded-full"></span>
           </button>
-          
+
           {showNotifications && (
             <div className={`absolute right-0 mt-2 w-80 rounded-lg shadow-lg py-2 z-50 transition-colors duration-300
-              ${darkMode 
-                ? 'bg-gray-800 border-gray-700' 
+              ${darkMode
+                ? 'bg-gray-800 border-gray-700'
                 : 'bg-white border-gray-200'} border`}>
               <div className={`px-4 py-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -82,11 +83,11 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
                 </h3>
               </div>
               {notifications.map((notification) => (
-                <div 
+                <div
                   key={notification.id}
                   className={`px-4 py-3 transition-colors duration-300
-                    ${darkMode 
-                      ? 'hover:bg-gray-700 text-gray-300' 
+                    ${darkMode
+                      ? 'hover:bg-gray-700 text-gray-300'
                       : 'hover:bg-gray-50 text-gray-800'}`}
                 >
                   <p className="text-sm">{notification.message}</p>
@@ -103,12 +104,12 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
             </div>
           )}
         </div>
-        
+
         <div className="relative">
-          <button 
+          <button
             className={`flex items-center gap-2 p-2 rounded-full transition-colors duration-300
-              ${darkMode 
-                ? 'hover:bg-gray-700' 
+              ${darkMode
+                ? 'hover:bg-gray-700'
                 : 'hover:bg-gray-100'}`}
             onClick={() => setShowProfile(!showProfile)}
           >
@@ -119,11 +120,11 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
             />
             <User size={20} className={darkMode ? 'text-gray-300' : 'text-gray-600'} />
           </button>
-          
+
           {showProfile && (
             <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg py-2 z-50 transition-colors duration-300
-              ${darkMode 
-                ? 'bg-gray-800 border-gray-700' 
+              ${darkMode
+                ? 'bg-gray-800 border-gray-700'
                 : 'bg-white border-gray-200'} border`}>
               <div className={`px-4 py-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>John Doe</p>
@@ -132,29 +133,31 @@ export default function Navbar({ pageTitle, darkMode, onDarkModeToggle }: Navbar
                 </p>
               </div>
               <div className="py-1">
-                <a 
-                  href="/account" 
+                <a
+                  href="/account"
                   className={`block px-4 py-2 text-sm transition-colors duration-300
-                    ${darkMode 
-                      ? 'text-gray-300 hover:bg-gray-700' 
+                    ${darkMode
+                      ? 'text-gray-300 hover:bg-gray-700'
                       : 'text-gray-700 hover:bg-gray-100'}`}
                 >
                   Profile
                 </a>
-                <a 
-                  href="/settings" 
+                <a
+                  href="/settings"
                   className={`block px-4 py-2 text-sm transition-colors duration-300
-                    ${darkMode 
-                      ? 'text-gray-300 hover:bg-gray-700' 
+                    ${darkMode
+                      ? 'text-gray-300 hover:bg-gray-700'
                       : 'text-gray-700 hover:bg-gray-100'}`}
                 >
                   Settings
                 </a>
                 <hr className={`my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                <button 
-                  className={`block w-full text-left px-4 py-2 text-sm text-red-500 transition-colors duration-300
+                <button
+                  onClick={onLogout}
+                  className={`block w-full text-left px-4 py-2 text-sm text-red-500 transition-colors duration-300 flex items-center
                     ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 >
+                  <LogOut size={16} className="mr-2" />
                   Logout
                 </button>
               </div>

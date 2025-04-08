@@ -1,6 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, Users, FileText, CheckSquare, Calendar, Settings, ChevronLeft, ChevronRight, AlignJustify as LawJustice } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  FileText,
+  CheckSquare,
+  Calendar,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  AlignJustify as LawJustice,
+  LogOut
+} from 'lucide-react';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Home', path: '/' },
@@ -16,16 +28,17 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   darkMode: boolean;
+  onLogout: () => void;
 }
 
-export default function Sidebar({ isOpen, onToggle, darkMode }: SidebarProps) {
+export default function Sidebar({ isOpen, onToggle, darkMode, onLogout }: SidebarProps) {
   const location = useLocation();
 
   return (
-    <div 
+    <div
       className={`fixed left-0 top-0 h-screen transition-all duration-300 z-20
-        ${darkMode 
-          ? 'bg-gray-800 text-white' 
+        ${darkMode
+          ? 'bg-gray-800 text-white'
           : 'bg-[#e8c4b8] text-gray-900'}
         ${isOpen ? 'w-64' : 'w-16'}`}
     >
@@ -33,8 +46,8 @@ export default function Sidebar({ isOpen, onToggle, darkMode }: SidebarProps) {
         ${darkMode ? 'border-gray-700' : 'border-[#ddb3a7]'}`}>
         {isOpen ? (
           <span className={`text-xl font-semibold transition-colors duration-300
-            ${darkMode 
-              ? 'text-white' 
+            ${darkMode
+              ? 'text-white'
               : 'text-gray-900'}`}>
             LexAI
           </span>
@@ -46,27 +59,27 @@ export default function Sidebar({ isOpen, onToggle, darkMode }: SidebarProps) {
         <button
           onClick={onToggle}
           className={`p-2 rounded-lg transition-colors duration-300
-            ${darkMode 
-              ? 'hover:bg-gray-700' 
+            ${darkMode
+              ? 'hover:bg-gray-700'
               : 'hover:bg-[#ddb3a7]'}`}
         >
           {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
       </div>
-      
+
       <nav className="p-2">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-                          (item.path === '/' && location.pathname === '') ||
-                          (item.path === '/cases' && location.pathname === '/cases');
+          const isActive = location.pathname === item.path ||
+            (item.path === '/' && location.pathname === '') ||
+            (item.path === '/cases' && location.pathname === '/cases');
           return (
             <Link
               key={item.label}
               to={item.path}
               className={`flex items-center gap-4 p-3 my-1 rounded-lg transition-all duration-200 group relative
-                ${isActive 
-                  ? darkMode 
-                    ? 'bg-gray-700 text-white' 
+                ${isActive
+                  ? darkMode
+                    ? 'bg-gray-700 text-white'
                     : 'bg-[#ddb3a7] text-gray-900'
                   : darkMode
                     ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -74,11 +87,11 @@ export default function Sidebar({ isOpen, onToggle, darkMode }: SidebarProps) {
             >
               <item.icon size={20} />
               {isOpen && <span>{item.label}</span>}
-              
+
               {!isOpen && (
                 <div className={`absolute left-16 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity
-                  ${darkMode 
-                    ? 'bg-gray-900 text-white' 
+                  ${darkMode
+                    ? 'bg-gray-900 text-white'
                     : 'bg-white text-gray-900 shadow-lg'}`}>
                   {item.label}
                 </div>
@@ -86,6 +99,27 @@ export default function Sidebar({ isOpen, onToggle, darkMode }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* Logout button */}
+        <button
+          onClick={onLogout}
+          className={`flex items-center gap-4 p-3 my-1 rounded-lg transition-all duration-200 group relative w-full
+            ${darkMode
+              ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              : 'text-gray-800 hover:bg-[#ddb3a7] hover:text-gray-900'}`}
+        >
+          <LogOut size={20} />
+          {isOpen && <span>Logout</span>}
+
+          {!isOpen && (
+            <div className={`absolute left-16 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity
+              ${darkMode
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-900 shadow-lg'}`}>
+              Logout
+            </div>
+          )}
+        </button>
       </nav>
 
       {isOpen && (
