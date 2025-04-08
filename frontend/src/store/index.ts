@@ -1,15 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import rootReducer from './rootReducer';
-import authReducer, { setAuthHeader } from '../features/auth/authSlice';
+import { setAuthHeader } from '../features/auth/authSlice';
 
 const store = configureStore({
   reducer: rootReducer,
-  middleware: (getDefaultMiddleware) => 
-    getDefaultMiddleware({
-      auth: authReducer,
-    }),
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
+// Initialize auth headers on app start
 const token = localStorage.getItem('token');
 if (token) {
   setAuthHeader(token);
