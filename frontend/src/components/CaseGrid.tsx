@@ -81,6 +81,24 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
     return date.toLocaleDateString();
   };
 
+  // Safely get error message as string
+  const getErrorMessage = () => {
+    if (typeof error === 'string') {
+      return error;
+    } else if (error && typeof error === 'object') {
+      if ('message' in error) return String(error.message);
+      if ('detail' in error) return String(error.detail);
+
+      // Convert error object to string
+      try {
+        return JSON.stringify(error);
+      } catch (e) {
+        return 'An error occurred while fetching cases';
+      }
+    }
+    return 'An unknown error occurred';
+  };
+
   return (
     <div className={`p-6 transition-colors duration-300 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
       <div className="mb-8">
@@ -98,8 +116,8 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
           <button
             onClick={handleCreateCase}
             className={`mr-2 px-3 py-2 rounded-md flex items-center gap-1 ${darkMode
-                ? 'bg-[#e8c4b8] text-gray-900 hover:bg-[#ddb3a7]'
-                : 'bg-[#e8c4b8] text-gray-900 hover:bg-[#ddb3a7]'
+              ? 'bg-[#e8c4b8] text-gray-900 hover:bg-[#ddb3a7]'
+              : 'bg-[#e8c4b8] text-gray-900 hover:bg-[#ddb3a7]'
               }`}
           >
             <PlusCircle size={16} />
@@ -115,8 +133,8 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
           <button
             onClick={() => setViewType('grid')}
             className={`p-2 rounded ${viewType === 'grid'
-                ? darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              ? darkMode ? 'bg-gray-700' : 'bg-gray-200'
+              : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
               }`}
           >
             <Grid size={20} className={darkMode ? 'text-white' : 'text-gray-700'} />
@@ -124,8 +142,8 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
           <button
             onClick={() => setViewType('list')}
             className={`p-2 rounded ${viewType === 'list'
-                ? darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              ? darkMode ? 'bg-gray-700' : 'bg-gray-200'
+              : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
               }`}
           >
             <List size={20} className={darkMode ? 'text-white' : 'text-gray-700'} />
@@ -142,7 +160,7 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{error}</p>
+          <p>{getErrorMessage()}</p>
           <button
             className="underline ml-2"
             onClick={handleRefresh}
@@ -169,8 +187,8 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
             <div
               key={case_.id}
               className={`rounded-lg border p-4 hover:shadow-lg transition-shadow ${darkMode
-                  ? 'bg-gray-800 border-gray-700'
-                  : 'bg-white border-gray-200'
+                ? 'bg-gray-800 border-gray-700'
+                : 'bg-white border-gray-200'
                 }`}
             >
               <div className="flex justify-between items-start mb-3">

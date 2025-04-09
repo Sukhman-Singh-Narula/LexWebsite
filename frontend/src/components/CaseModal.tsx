@@ -1,230 +1,295 @@
+// src/components/CaseModal.tsx
 import React, { useState, useEffect } from 'react';
-import { MoreVertical, Grid, List, RefreshCcw, PlusCircle, Edit, Trash } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../store';
-import {
-    fetchCases,
-    Case,
-    selectCases,
-    selectCasesLoading,
-    selectCasesError,
-    setSelectedCase
-} from '../features/cases/caseSlices';
-import CaseModal from './CaseModal';
+import { Case, selectCreateCaseLoading, selectUpdateCaseLoading } from '../features/cases/caseSlices';
+import { createCase, updateCase } from '../features/cases/caseActions';
 
-const priorityColors = {
-    High: 'bg-red-100 text-red-800',
-    Medium: 'bg-yellow-100 text-yellow-800',
-    Low: 'bg-green-100 text-green-800'
-};
-
-const statusColors = {
-    draft: 'bg-gray-100 text-gray-800',
-    active: 'bg-blue-100 text-blue-800',
-    pending: 'bg-amber-100 text-amber-800',
-    closed: 'bg-gray-100 text-gray-800'
-};
-
-// Map API status to display text
-const statusDisplayText = {
-    draft: 'Draft',
-    active: 'Active',
-    pending: 'Pending',
-    closed: 'Closed'
-};
-
-interface CaseGridProps {
+interface CaseModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    caseData?: Case;
     darkMode: boolean;
 }
 
-export default function CaseGrid({ darkMode }: CaseGridProps) {
-    const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [caseToEdit, setCaseToEdit] = useState<Case | undefined>(undefined);
+// Function to generate a proper UUID v4
+function generateUUIDv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
+// Function to generate a unique case number
+const generateCaseNumber = () => {
+    return `CASE-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 1000)}`;
+};
+
+const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMode }) => {
     const dispatch = useDispatch<AppDispatch>();
+    const createLoading = useSelector(selectCreateCaseLoading);
+    const updateLoading = useSelector(selectUpdateCaseLoading);
+    const loading = createLoading || updateLoading;
+    const [error, setError] = useState<string | null>(null);
 
-    // Select cases from Redux store using selectors
-    const cases = useSelector(selectCases);
-    const loading = useSelector(selectCasesLoading);
-    const error = useSelector(selectCasesError);
+    // Generate a proper UUID v4 for client_id
+    const validClientId = generateUUIDv4();
 
-    // Fetch cases on component mount
+    // Initial form state with auto-generated case number and valid UUID
+    const initialFormState = {
+        title: '',
+        case_number: generateCaseNumber(),
+        description: '',
+        status: 'draft',
+        client_id: validClientId, // Use a proper UUID v4
+        priority: 'Medium' as 'High' | 'Medium' | 'Low'
+    };
+
+    const [formData, setFormData] = useState(initialFormState);
+
+    // Reset the form when modal opens/closes
     useEffect(() => {
-        dispatch(fetchCases());
-    }, [dispatch]);
+        if (isOpen) {
+            if (caseData) {
+                setFormData({
+                    title: caseData.title || '',
+                    case_number: caseData.case_number || '',
+                    description: caseData.description || '',
+                    status: caseData.status || 'draft',
+                    client_id: caseData.client_id || validClientId, // Use the valid UUID v4
+                    priority: caseData.priority || 'Medium'
+                });
+            } else {
+                // Generate a new case number and UUID for new cases
+                setFormData({
+                    ...initialFormState,
+                    case_number: generateCaseNumber(),
+                    client_id: generateUUIDv4() // Fresh UUID for each new case
+                });
+            }
+            // Clear any errors
+            setError(null);
+        }
+    }, [caseData, isOpen]);
 
-    const handleRefresh = () => {
-        dispatch(fetchCases());
+    if (!isOpen) return null;
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
-    const handleCreateCase = () => {
-        setCaseToEdit(undefined); // Make sure we're not in edit mode
-        setIsModalOpen(true);
-    };
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
 
-    const handleEditCase = (caseData: Case) => {
-        setCaseToEdit(caseData);
-        setIsModalOpen(true);
-    };
+        try {
+            // Log what we're about to send
+            console.log('Submitting form data:', formData);
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        // Refresh the cases list after closing the modal
-        dispatch(fetchCases());
-    };
+            if (caseData) {
+                // Update existing case
+                await dispatch(updateCase({
+                    id: caseData.id,
+                    data: {
+                        title: formData.title,
+                        description: formData.description,
+                        status: formData.status as any,
+                        // Add more fields as needed
+                    }
+                })).unwrap();
+            } else {
+                // Create new case with proper UUID v4
+                await dispatch(createCase({
+                    title: formData.title,
+                    case_number: formData.case_number,
+                    description: formData.description,
+                    client_id: formData.client_id, // This is now a proper UUID v4
+                    status: formData.status as any,
+                })).unwrap();
+            }
+            onClose();
+        } catch (error: any) {
+            console.error('Failed to save case:', error);
 
-    // Format date for display
-    const formatDate = (dateString: string) => {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
+            // Try to extract a meaningful error message
+            let errorMessage = 'An error occurred while saving the case';
+
+            if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            } else if (error?.detail) {
+                errorMessage = error.detail;
+            } else if (error?.data?.detail) {
+                errorMessage = error.data.detail;
+            }
+
+            setError(errorMessage);
+        }
     };
 
     return (
-        <div className={`p-6 transition-colors duration-300 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            <div className="mb-8">
-                <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Welcome to LexAI
-                </h1>
-                <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Your AI-powered legal assistant
-                </p>
-            </div>
-
-            <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>My Cases</h2>
-                <div className="flex gap-2 items-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`rounded-lg p-6 w-full max-w-md transition-colors duration-300 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white'
+                }`}>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">
+                        {caseData ? 'Edit Case' : 'Create New Case'}
+                    </h2>
                     <button
-                        onClick={handleCreateCase}
-                        className={`mr-2 px-3 py-2 rounded-md flex items-center gap-1 ${darkMode
-                                ? 'bg-[#e8c4b8] text-gray-900 hover:bg-[#ddb3a7]'
-                                : 'bg-[#e8c4b8] text-gray-900 hover:bg-[#ddb3a7]'
+                        onClick={onClose}
+                        className={`p-1 rounded hover:bg-opacity-10 ${darkMode ? 'hover:bg-white' : 'hover:bg-gray-100'
                             }`}
                     >
-                        <PlusCircle size={16} />
-                        <span>New Case</span>
-                    </button>
-                    <button
-                        onClick={handleRefresh}
-                        className={`p-2 rounded transition-colors duration-300 ${darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
-                            } ${loading ? 'animate-spin' : ''}`}
-                    >
-                        <RefreshCcw size={20} />
-                    </button>
-                    <button
-                        onClick={() => setViewType('grid')}
-                        className={`p-2 rounded ${viewType === 'grid'
-                                ? darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                                : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                            }`}
-                    >
-                        <Grid size={20} className={darkMode ? 'text-white' : 'text-gray-700'} />
-                    </button>
-                    <button
-                        onClick={() => setViewType('list')}
-                        className={`p-2 rounded ${viewType === 'list'
-                                ? darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                                : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                            }`}
-                    >
-                        <List size={20} className={darkMode ? 'text-white' : 'text-gray-700'} />
+                        <X size={20} />
                     </button>
                 </div>
-            </div>
 
-            {loading && (
-                <div className={`flex justify-center items-center py-8 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-500 mr-3"></div>
-                    Loading cases...
-                </div>
-            )}
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <p className="text-sm">{error}</p>
+                    </div>
+                )}
 
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    <p>{error}</p>
-                    <button
-                        className="underline ml-2"
-                        onClick={handleRefresh}
-                    >
-                        Try again
-                    </button>
-                </div>
-            )}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            Case Title*
+                        </label>
+                        <input
+                            type="text"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
+                                }`}
+                            required
+                        />
+                    </div>
 
-            {!loading && !error && cases.length === 0 && (
-                <div className={`bg-${darkMode ? 'gray-800' : 'white'} rounded-lg p-8 text-center shadow`}>
-                    <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        No cases found
-                    </h3>
-                    <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                        You don't have any cases yet. Create a new case to get started.
-                    </p>
-                </div>
-            )}
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            Case Number* (auto-generated)
+                        </label>
+                        <input
+                            type="text"
+                            name="case_number"
+                            value={formData.case_number}
+                            onChange={handleChange}
+                            className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
+                                }`}
+                            disabled={!!caseData} // Disable editing case number for existing cases
+                            required
+                        />
+                        <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Auto-generated for uniqueness
+                        </p>
+                    </div>
 
-            {!loading && !error && cases.length > 0 && (
-                <div className={`grid ${viewType === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'} gap-4`}>
-                    {cases.map((case_) => (
-                        <div
-                            key={case_.id}
-                            className={`rounded-lg border p-4 hover:shadow-lg transition-shadow ${darkMode
-                                    ? 'bg-gray-800 border-gray-700'
-                                    : 'bg-white border-gray-200'
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            Description
+                        </label>
+                        <textarea
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
+                                }`}
+                            rows={3}
+                        />
+                    </div>
+
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            Status
+                        </label>
+                        <select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleChange}
+                            className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
                                 }`}
                         >
-                            <div className="flex justify-between items-start mb-3">
-                                <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    {case_.title}
-                                </h3>
-                                <div className="flex space-x-1">
-                                    <button
-                                        className={`p-1 rounded ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-                                            }`}
-                                        onClick={() => handleEditCase(case_)}
-                                        title="Edit case"
-                                    >
-                                        <Edit size={18} />
-                                    </button>
-                                    <button
-                                        className={`p-1 rounded ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-                                            }`}
-                                        title="More options"
-                                    >
-                                        <MoreVertical size={18} />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
-                                    Case Number: {case_.case_number}
-                                </p>
-                                <p className={darkMode ? 'text-gray-400 text-sm' : 'text-gray-500 text-sm'}>
-                                    Last updated: {formatDate(case_.updated_at)}
-                                </p>
-                                <div className="flex gap-2 mt-3">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[case_.status as keyof typeof statusColors]}`}>
-                                        {statusDisplayText[case_.status as keyof typeof statusDisplayText]}
-                                    </span>
-                                    {case_.priority && (
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[case_.priority as keyof typeof priorityColors]}`}>
-                                            {case_.priority}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                            <option value="draft">Draft</option>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
 
-            {/* Case Modal for creating/editing cases */}
-            <CaseModal
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
-                caseData={caseToEdit}
-                darkMode={darkMode}
-            />
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            Priority
+                        </label>
+                        <select
+                            name="priority"
+                            value={formData.priority}
+                            onChange={handleChange}
+                            className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
+                                }`}
+                        >
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+
+                    <div className="flex justify-end space-x-3 mt-6">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-[#e8c4b8] text-gray-900 rounded-md text-sm font-medium hover:bg-[#ddb3a7] transition-colors duration-300 flex items-center gap-2"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Case'
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
-}
+};
+
+export default CaseModal;
