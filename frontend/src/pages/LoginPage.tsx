@@ -44,10 +44,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ darkMode }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Dispatch the login action
       await dispatch(login(credentials)).unwrap();
+
+      // After successful login, navigate to home
+      // Add a console.log here to debug
+      console.log('Login successful, navigating to home');
       navigate('/');
     } catch (err) {
-      // Error is handled by the reducer
+      // Log the error to see what's happening
+      console.error('Login failed:', err);
     }
   };
 

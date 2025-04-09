@@ -43,6 +43,17 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+  useEffect(() => {
+    // Use a ref to prevent infinite rerendering
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      // Don't dispatch actions here unless necessary
+      console.log('Auth token exists:', !!token);
+    };
+
+    checkAuth();
+    // Don't include state variables that change frequently in the dependency array
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -77,6 +88,7 @@ function App() {
   if (!isAuthenticated && !isAuthPage) {
     return <Navigate to="/login" replace />;
   }
+  
 
   // Render just the auth pages without sidebar/navbar when on login or signup
   if (isAuthPage) {
