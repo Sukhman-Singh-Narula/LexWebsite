@@ -9,11 +9,12 @@ import Clients from './pages/Clients';
 import Settings from './pages/Settings';
 import Tasks from './pages/Tasks';
 import LoginPage from './pages/LoginPage';
+import CaseFilesPage from './pages/CaseFilesPage';
 import SignupPage from './pages/SignupPage';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectIsAuthenticated, logout } from './features/auth/authSlice';
 import { AppDispatch } from './store';
-
+import CaseDetail from './pages/CaseDetail';
 // Protected route component
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -154,6 +155,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CaseGrid darkMode={darkMode} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cases/:caseId"
+                element={
+                  <ProtectedRoute>
+                    <CaseDetail darkMode={darkMode} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cases/:caseId/files"
+                element={
+                  <ProtectedRoute>
+                    <CaseFilesPage darkMode={darkMode} />
                   </ProtectedRoute>
                 }
               />

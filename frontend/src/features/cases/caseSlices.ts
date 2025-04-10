@@ -1,6 +1,9 @@
-// src/features/cases/casesSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+// src/features/cases/caseSlices.ts
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api from '../../services/api';
+
+// Import the case actions
+import { fetchCase, createCase, updateCase, fetchCases } from './caseActions';
 
 // Define Case type based on your API response
 export interface Case {
@@ -17,45 +20,6 @@ export interface Case {
     client?: string;
     priority?: 'High' | 'Medium' | 'Low';
 }
-
-interface CasesState {
-    cases: Case[];
-    loading: boolean;
-    error: string | null;
-}
-
-// Fetch cases async thunk
-export const fetchCases = createAsyncThunk<
-    Case[],
-    void,
-    { rejectValue: { detail: string } }
->(
-    'cases/fetchCases',
-    async (_, { rejectWithValue }) => {
-        try {
-            const response = await api.get<Case[]>('/cases');
-
-            // Map API data to our Case interface with additional UI fields
-            const casesWithUIFields = response.data.map(caseItem => ({
-                ...caseItem,
-                // Randomly assign priority for demo purposes
-                // In a real app, this would come from the API or be calculated
-                priority: ['High', 'Medium', 'Low'][Math.floor(Math.random() * 3)] as 'High' | 'Medium' | 'Low',
-                client: 'Client information' // This would be populated from actual client data
-            }));
-
-            return casesWithUIFields;
-        } catch (error: any) {
-            if (error.response && error.response.data) {
-                return rejectWithValue(error.response.data);
-            }
-            return rejectWithValue({ detail: 'Failed to fetch cases' });
-        }
-    }
-);
-
-// Import the case actions
-import { fetchCase, createCase, updateCase } from './caseActions';
 
 // Additional state for individual case handling
 interface CasesState {
@@ -165,5 +129,8 @@ export const selectCasesLoading = (state: { cases: CasesState }) => state.cases.
 export const selectCasesError = (state: { cases: CasesState }) => state.cases.error;
 export const selectCreateCaseLoading = (state: { cases: CasesState }) => state.cases.createCaseLoading;
 export const selectUpdateCaseLoading = (state: { cases: CasesState }) => state.cases.updateCaseLoading;
+
+// Export the fetchCase action so it can be imported in components
+export { fetchCase, fetchCases, createCase, updateCase };
 
 export default casesSlice.reducer;
