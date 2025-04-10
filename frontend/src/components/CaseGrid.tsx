@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MoreVertical, Grid, List, RefreshCcw, PlusCircle, Edit, Trash } from 'lucide-react';
+import { MoreVertical, Grid, List, RefreshCcw, PlusCircle, Edit, Trash, File, ExternalLink, Briefcase } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../store';
 import {
@@ -11,6 +11,8 @@ import {
   setSelectedCase
 } from '../features/cases/caseSlices';
 import CaseModal from './CaseModal';
+import { Link } from 'react-router-dom';
+
 
 const priorityColors = {
   High: 'bg-red-100 text-red-800',
@@ -229,6 +231,31 @@ export default function CaseGrid({ darkMode }: CaseGridProps) {
                       {case_.priority}
                     </span>
                   )}
+                </div>
+
+                {/* Case action buttons */}
+                <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <Link
+                    to={`/cases/${case_.id}`}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded ${darkMode
+                        ? 'text-gray-300 hover:bg-gray-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                      } transition-colors duration-200`}
+                  >
+                    <Briefcase size={16} />
+                    Details
+                  </Link>
+
+                  <Link
+                    to={`/cases/${case_.id}/files`}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded ${darkMode
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      } transition-colors duration-200`}
+                  >
+                    <File size={16} />
+                    Files
+                  </Link>
                 </div>
               </div>
             </div>
