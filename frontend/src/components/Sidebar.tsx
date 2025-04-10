@@ -17,6 +17,7 @@ import {
 const menuItems = [
   { icon: LayoutDashboard, label: 'Home', path: '/' },
   { icon: Briefcase, label: 'My Cases', path: '/cases' },
+  { icon: Users, label: 'Clients', path: '/clients' }, // Add this line
   { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: FileText, label: 'Documents', path: '/documents' },
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },

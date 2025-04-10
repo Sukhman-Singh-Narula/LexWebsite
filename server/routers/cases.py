@@ -3,22 +3,69 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
-from models import Case, CaseStatus, CaseCreate, CaseUpdate, CaseResponse
-from auth import get_current_advocate
+from models import Case, CaseStatus, CaseCreate, CaseUpdate, CaseResponse, Client
+from auth import get_current_advocate  # Added this import
 import uuid
 from datetime import datetime
+from pydantic import BaseModel
+
+# Create a custom model for creating cases without requiring client_id
+class CaseCreateWithOptionalClient(BaseModel):
+    title: str
+    description: Optional[str] = None
+    case_number: str
+    filing_date: Optional[datetime] = None
+    case_metadata: Optional[dict] = {}
+    client_id: Optional[uuid.UUID] = None
+    status: Optional[CaseStatus] = CaseStatus.DRAFT
 
 # Create the router object that FastAPI will use
 router = APIRouter()
 @router.post("/", response_model=CaseResponse)
-async def create_case(case_data: CaseCreate, current_advocate = Depends(get_current_advocate), db: Session = Depends(get_db)):
+async def create_case(
+    case_data: CaseCreateWithOptionalClient, 
+    current_advocate = Depends(get_current_advocate), 
+    db: Session = Depends(get_db)
+):
+    # Check if we need to create a default client
+    client_id = case_data.client_id
+    
+    # If no client_id is provided, try to find or create a default client
+    if client_id is None:
+        # Try to find an existing client
+        default_client = db.query(Client).first()
+        
+        if default_client:
+            client_id = default_client.id
+        else:
+            # If no clients exist, create a default one
+            try:
+                default_client = Client(
+                    email="default@example.com",
+                    full_name="Default Client",
+                    address={},
+                    is_active=True
+                )
+                db.add(default_client)
+                db.commit()
+                db.refresh(default_client)
+                client_id = default_client.id
+            except Exception as e:
+                db.rollback()
+                # If we can't create a default client, we'll return a more helpful error
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Could not create case: Client is required but no default client could be created."
+                )
+    
+    # Create the case with the client_id (original or default)
     case = Case(
         advocate_id=current_advocate.id,
-        client_id=case_data.client_id,
+        client_id=client_id,
         case_number=case_data.case_number,
         title=case_data.title,
         description=case_data.description,
-        status=CaseStatus.DRAFT,
+        status=case_data.status or CaseStatus.DRAFT,
         filing_date=case_data.filing_date or datetime.utcnow(),
         case_metadata=case_data.case_metadata or {}
     )

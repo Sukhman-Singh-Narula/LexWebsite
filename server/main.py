@@ -14,7 +14,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(advocates.router, prefix="/advocates", tags=["Advocates"])
-# app.include_router(clients.router, prefix="/clients", tags=["Clients"])
+app.include_router(clients.router, prefix="/clients", tags=["Clients"])
 app.include_router(cases.router, prefix="/cases", tags=["Cases"])
 app.include_router(documents.router, prefix="/documents", tags=["Documents"])
 
