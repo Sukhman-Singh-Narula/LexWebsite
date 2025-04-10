@@ -80,10 +80,37 @@ export const createCase = createAsyncThunk<
         try {
             console.log('Creating new case with data:', caseData);
 
-            // Log the exact payload being sent
-            console.log('Case creation payload:', JSON.stringify(caseData));
+            // Create a dummy client ID to use for testing
+            // In a real app, this would come from a client lookup or be optional in the backend
+            const dummyClientId = '00000000-0000-0000-0000-000000000000';
 
-            const response = await api.post<Case>('/cases', caseData);
+            // Build the API payload - add a dummy client_id if not provided
+            const payload = {
+                ...caseData,
+                // If using a backend that requires client_id, add it here for testing
+                // client_id: caseData.client_id || dummyClientId,
+            };
+
+            // Log the exact payload being sent
+            console.log('Case creation payload:', JSON.stringify(payload));
+
+            // TEMPORARY FIX: Mocking successful response for demo purposes
+            // In a real application, you would uncomment this and make the actual API call
+            // Comment out this mock response once the backend endpoint is fixed
+            /*
+            const mockedResponse = {
+                id: crypto.randomUUID(),
+                advocate_id: crypto.randomUUID(),
+                client_id: dummyClientId,
+                ...payload,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            return mockedResponse as Case;
+            */
+
+            // Make the actual API call
+            const response = await api.post<Case>('/cases', payload);
             console.log('Case created successfully:', response.data);
             return response.data;
         } catch (error: any) {

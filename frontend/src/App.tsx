@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import CaseGrid from './components/CaseGrid';
 import Calendar from './pages/Calendar';
 import Account from './pages/Account';
+import Clients from './pages/Clients';
 import Settings from './pages/Settings';
 import Tasks from './pages/Tasks';
 import LoginPage from './pages/LoginPage';
@@ -77,6 +78,8 @@ function App() {
         return 'Login';
       case '/signup':
         return 'Sign Up';
+      case '/clients':
+        return 'Clients';
       default:
         return 'Dashboard';
     }
@@ -135,6 +138,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CaseGrid darkMode={darkMode} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clients"
+                element={
+                  <ProtectedRoute>
+                    <Clients darkMode={darkMode} />
                   </ProtectedRoute>
                 }
               />
