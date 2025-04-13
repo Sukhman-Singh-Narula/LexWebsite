@@ -1,3 +1,4 @@
+// src/pages/CaseFilesPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -18,6 +19,7 @@ const CaseFilesPage: React.FC<CaseFilesPageProps> = ({ darkMode }) => {
     const selectedCase = useSelector(selectSelectedCase);
     const loading = useSelector(selectCasesLoading);
 
+    // Fetch case data when component mounts or caseId changes
     useEffect(() => {
         if (caseId) {
             dispatch(fetchCase(caseId));
