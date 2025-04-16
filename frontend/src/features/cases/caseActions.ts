@@ -78,48 +78,46 @@ export const createCase = createAsyncThunk<
     'cases/createCase',
     async (caseData, { rejectWithValue }) => {
         try {
+            // Validate required fields client-side to prevent unnecessary API calls
+            if (!caseData.title || !caseData.client_id) {
+                throw new Error('Missing required fields: title and client_id are required');
+            }
+
             console.log('Creating new case with data:', caseData);
 
-            // Create a dummy client ID to use for testing
-            // In a real app, this would come from a client lookup or be optional in the backend
-            const dummyClientId = '00000000-0000-0000-0000-000000000000';
-
-            // Build the API payload - add a dummy client_id if not provided
-            const payload = {
+            // Normalize the data for the API
+            const normalizedData = {
                 ...caseData,
-                // If using a backend that requires client_id, add it here for testing
-                // client_id: caseData.client_id || dummyClientId,
+                // Ensure status is lowercase
+                status: caseData.status ? caseData.status.toLowerCase() : 'draft',
+                // Convert boolean/number fields if needed
+                // ...other normalizations as needed
             };
 
-            // Log the exact payload being sent
-            console.log('Case creation payload:', JSON.stringify(payload));
+            console.log('Normalized case creation payload:', JSON.stringify(normalizedData));
 
-            // TEMPORARY FIX: Mocking successful response for demo purposes
-            // In a real application, you would uncomment this and make the actual API call
-            // Comment out this mock response once the backend endpoint is fixed
-            /*
-            const mockedResponse = {
-                id: crypto.randomUUID(),
-                advocate_id: crypto.randomUUID(),
-                client_id: dummyClientId,
-                ...payload,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            return mockedResponse as Case;
-            */
+            // Make the API call with the normalized data
+            const response = await api.post<Case>('/cases', normalizedData);
 
-            // Make the actual API call
-            const response = await api.post<Case>('/cases', payload);
             console.log('Case created successfully:', response.data);
             return response.data;
         } catch (error: any) {
             console.error('Error creating case:', error);
 
-            // If it's an Axios error with a response
+            // Enhanced error logging
             if (error.response) {
                 console.error('Response status:', error.response.status);
                 console.error('Response data:', error.response.data);
+
+                // Log the request body if available
+                if (error.config && error.config.data) {
+                    try {
+                        const requestBody = JSON.parse(error.config.data);
+                        console.error('Request body sent:', requestBody);
+                    } catch (parseError) {
+                        console.error('Request body (non-JSON):', error.config.data);
+                    }
+                }
             }
 
             return rejectWithValue(handleApiError(error));
@@ -136,8 +134,16 @@ export const updateCase = createAsyncThunk<
     'cases/updateCase',
     async ({ id, data }, { rejectWithValue }) => {
         try {
-            console.log(`Updating case ${id} with data:`, data);
-            const response = await api.put<Case>(`/cases/${id}`, data);
+            // Normalize the data for the API
+            const normalizedData = {
+                ...data,
+                // Ensure status is lowercase if provided
+                ...(data.status && { status: data.status.toLowerCase() }),
+            };
+
+            console.log(`Updating case ${id} with normalized data:`, normalizedData);
+
+            const response = await api.put<Case>(`/cases/${id}`, normalizedData);
             console.log('Case updated successfully:', response.data);
             return response.data;
         } catch (error: any) {

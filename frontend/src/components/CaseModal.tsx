@@ -1,25 +1,17 @@
 // src/components/CaseModal.tsx
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, User } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../store';
 import { Case, selectCreateCaseLoading, selectUpdateCaseLoading } from '../features/cases/caseSlices';
 import { createCase, updateCase } from '../features/cases/caseActions';
+import { fetchClients, selectClients, selectClientsLoading } from '../features/clients/clientSlice';
 
 interface CaseModalProps {
     isOpen: boolean;
     onClose: () => void;
     caseData?: Case;
     darkMode: boolean;
-}
-
-// Function to generate a proper UUID v4
-function generateUUIDv4() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
 }
 
 // Function to generate a unique case number
@@ -34,20 +26,29 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
     const loading = createLoading || updateLoading;
     const [error, setError] = useState<string | null>(null);
 
-    // Generate a proper UUID v4 for client_id
-    const validClientId = generateUUIDv4();
+    // Get clients from store
+    const clients = useSelector(selectClients);
+    const clientsLoading = useSelector(selectClientsLoading);
 
-    // Initial form state with auto-generated case number and valid UUID
+    // Initial form state with auto-generated case number
     const initialFormState = {
         title: '',
         case_number: generateCaseNumber(),
         description: '',
-        status: 'draft',
-        client_id: validClientId, // Use a proper UUID v4
+        status: 'draft', // Important: Use lowercase
+        client_id: '', // Will be populated from dropdown
         priority: 'Medium' as 'High' | 'Medium' | 'Low'
     };
 
     const [formData, setFormData] = useState(initialFormState);
+    const [clientValidationError, setClientValidationError] = useState(false);
+
+    // Fetch clients when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            dispatch(fetchClients());
+        }
+    }, [isOpen, dispatch]);
 
     // Reset the form when modal opens/closes
     useEffect(() => {
@@ -57,22 +58,23 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                     title: caseData.title || '',
                     case_number: caseData.case_number || '',
                     description: caseData.description || '',
-                    status: caseData.status || 'draft',
-                    client_id: caseData.client_id || validClientId, // Use the valid UUID v4
+                    status: caseData.status || 'draft', // Use lowercase
+                    client_id: caseData.client_id || '',
                     priority: caseData.priority || 'Medium'
                 });
             } else {
-                // Generate a new case number and UUID for new cases
+                // Generate a new case number for new cases
                 setFormData({
                     ...initialFormState,
                     case_number: generateCaseNumber(),
-                    client_id: generateUUIDv4() // Fresh UUID for each new case
+                    client_id: clients.length > 0 ? clients[0].id : '' // Set first client as default if available
                 });
             }
             // Clear any errors
             setError(null);
+            setClientValidationError(false);
         }
-    }, [caseData, isOpen]);
+    }, [caseData, isOpen, clients]);
 
     if (!isOpen) return null;
 
@@ -82,11 +84,23 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
             ...prev,
             [name]: value
         }));
+
+        // Clear client validation error when user selects a client
+        if (name === 'client_id' && clientValidationError) {
+            setClientValidationError(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setClientValidationError(false);
+
+        // Validate client selection
+        if (!formData.client_id) {
+            setClientValidationError(true);
+            return;
+        }
 
         try {
             // Log what we're about to send
@@ -99,18 +113,26 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                     data: {
                         title: formData.title,
                         description: formData.description,
-                        status: formData.status as any,
-                        // Add more fields as needed
+                        status: formData.status,
+                        // We don't update client_id for existing cases
                     }
                 })).unwrap();
             } else {
-                // Create new case with proper UUID v4
+                // Create new case
+                console.log('Creating case with data:', {
+                    title: formData.title,
+                    case_number: formData.case_number,
+                    description: formData.description,
+                    client_id: formData.client_id,
+                    status: formData.status
+                });
+
                 await dispatch(createCase({
                     title: formData.title,
                     case_number: formData.case_number,
                     description: formData.description,
-                    client_id: formData.client_id, // This is now a proper UUID v4
-                    status: formData.status as any,
+                    client_id: formData.client_id,
+                    status: formData.status,
                 })).unwrap();
             }
             onClose();
@@ -158,6 +180,50 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Client Selection Dropdown */}
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            Client*
+                        </label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <User size={16} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
+                            </div>
+                            <select
+                                name="client_id"
+                                value={formData.client_id}
+                                onChange={handleChange}
+                                className={`w-full pl-10 rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                        ? 'bg-gray-700 border-gray-600 text-white'
+                                        : 'border-gray-300'
+                                    } ${clientValidationError ? 'border-red-500' : ''}`}
+                                disabled={!!caseData} // Disable editing client for existing cases
+                                required
+                            >
+                                <option value="">Select a client</option>
+                                {clients.map(client => (
+                                    <option key={client.id} value={client.id}>
+                                        {client.full_name} {client.company_name ? `(${client.company_name})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {clientValidationError && (
+                            <p className="text-red-500 text-xs mt-1">Please select a client</p>
+                        )}
+                        {clientsLoading && (
+                            <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Loading clients...
+                            </p>
+                        )}
+                        {!clientsLoading && clients.length === 0 && (
+                            <p className="text-yellow-500 text-xs mt-1">
+                                No clients available. Please add a client first.
+                            </p>
+                        )}
+                    </div>
+
                     <div>
                         <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
                             }`}>
@@ -271,7 +337,7 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                         <button
                             type="submit"
                             className="px-4 py-2 bg-[#e8c4b8] text-gray-900 rounded-md text-sm font-medium hover:bg-[#ddb3a7] transition-colors duration-300 flex items-center gap-2"
-                            disabled={loading}
+                            disabled={loading || (clients.length === 0)}
                         >
                             {loading ? (
                                 <>
