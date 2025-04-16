@@ -11,7 +11,7 @@ export interface Case {
     title: string;
     case_number: string;
     description?: string;
-    status: 'draft' | 'active' | 'pending' | 'closed';
+    status: 'draft' | 'active' | 'pending' | 'closed'; // lowercase to match backend enum
     client_id: string;
     filing_date?: string;
     created_at: string;

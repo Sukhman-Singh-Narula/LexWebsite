@@ -3,50 +3,37 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
-from models import Client, ClientCreate, ClientUpdate, ClientResponse
+from models import Client, ClientCreate, ClientUpdate, ClientResponse, Case  # Import Case here
 from auth import get_current_advocate
 import uuid
 
 router = APIRouter()
 
-@router.post("/", response_model=ClientResponse)
-async def create_client(
-    client_data: ClientCreate,
+@router.get("/", response_model=List[ClientResponse])
+async def list_clients(
     current_advocate = Depends(get_current_advocate),
     db: Session = Depends(get_db)
 ):
     """
-    Creates a new client.
-    This client will be associated with cases managed by the advocate.
+    Lists clients associated with the current advocate.
     """
-    # Check if client with this email already exists
-    existing_client = db.query(Client).filter(Client.email == client_data.email).first()
-    if existing_client:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A client with this email already exists"
-        )
+    # Query clients through cases relationship
+    # Get unique client_ids from the advocate's cases
+    case_client_ids = db.query(Case.client_id).filter(
+        Case.advocate_id == current_advocate.id
+    ).distinct().all()
     
-    # Create new client
-    client = Client(
-        email=client_data.email,
-        full_name=client_data.full_name,
-        phone=client_data.phone,
-        address=client_data.address,
-        company_name=client_data.company_name
-    )
+    if case_client_ids:
+        # Extract the UUIDs from the result
+        client_ids = [client_id for (client_id,) in case_client_ids]
+        
+        # Query clients with these IDs
+        clients = db.query(Client).filter(Client.id.in_(client_ids)).all()
+    else:
+        # If the advocate has no cases yet, return an empty list
+        clients = []
     
-    try:
-        db.add(client)
-        db.commit()
-        db.refresh(client)
-        return client
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not create client: {str(e)}"
-        )
+    return clients
 
 @router.get("/", response_model=List[ClientResponse])
 async def list_clients(
