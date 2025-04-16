@@ -8,7 +8,6 @@ import boto3
 from config import get_settings
 import os
 import tempfile
-
 settings = get_settings()
 
 class DocumentService:
@@ -176,8 +175,8 @@ class DocumentService:
                 Key=s3_path
             )
             return response['Body'].read()
-        except ClientError as e:
+        except Exception as e:
             raise HTTPException(
-                status_code=500,
-                detail=f"S3 download failed: {str(e)}"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving document content: {str(e)}"
             )
