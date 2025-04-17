@@ -18,8 +18,7 @@ import { File, Upload, Download, AlertCircle, X, FileText, FilePlus, ChevronLeft
 // Import PDF components
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = "http://localhost:3000/pdf.worker.min.js";
 
 // Document viewer modal component
 interface ViewerModalProps {
@@ -401,6 +400,7 @@ const CaseFiles: React.FC<CaseFilesProps> = ({ caseId, darkMode }) => {
     dispatch(uploadDocument(formData));
   };
 
+  // In CaseFiles.tsx
   const handleViewDocument = async (document: any) => {
     try {
       setSelectedDocument(document);
@@ -408,15 +408,13 @@ const CaseFiles: React.FC<CaseFilesProps> = ({ caseId, darkMode }) => {
       // Using the downloadDocument action
       const response = await dispatch(downloadDocument(document.id)).unwrap();
 
-      // Create a URL for the blob
-      const url = URL.createObjectURL(response);
-      setDocumentUrl(url);
+      // Use the blob URL from the response
+      setDocumentUrl(response.blobUrl);
 
       // Open the viewer modal
       setViewerModalOpen(true);
     } catch (error) {
       console.error('Error downloading document:', error);
-      // You could add error handling UI here
     }
   };
 

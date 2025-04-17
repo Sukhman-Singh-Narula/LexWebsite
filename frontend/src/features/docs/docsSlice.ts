@@ -119,7 +119,8 @@ export const downloadDocument = createAsyncThunk(
             const response = await api.get(`/documents/${documentId}/content`, {
                 responseType: 'blob'
             });
-            return response.data;
+            // Don't return the blob directly
+            return { blobUrl: URL.createObjectURL(response.data) };
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.detail || 'Failed to download document');
         }
