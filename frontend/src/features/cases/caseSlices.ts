@@ -3,7 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api from '../../services/api';
 
 // Import the case actions
-import { fetchCase, createCase, updateCase, fetchCases } from './caseActions';
+import { fetchCase, createCase, updateCase, fetchCases, fetchCourtCaseDetails } from './caseActions';
 
 // Define Case type based on your API response
 export interface Case {
@@ -29,6 +29,9 @@ interface CasesState {
     error: string | null;
     createCaseLoading: boolean;
     updateCaseLoading: boolean;
+    courtCaseDetails: any | null;
+    fetchingCourtCase: boolean;
+    courtCaseError: string | null;
 }
 
 const initialState: CasesState = {
@@ -37,7 +40,10 @@ const initialState: CasesState = {
     loading: false,
     error: null,
     createCaseLoading: false,
-    updateCaseLoading: false
+    updateCaseLoading: false,
+    courtCaseDetails: null,
+    fetchingCourtCase: false,
+    courtCaseError: null
 };
 
 // Create slice
@@ -96,7 +102,6 @@ const casesSlice = createSlice({
                 state.error = action.payload?.detail || 'Failed to create case';
             })
 
-            // Update case
             .addCase(updateCase.pending, (state) => {
                 state.updateCaseLoading = true;
                 state.error = null;
@@ -116,6 +121,18 @@ const casesSlice = createSlice({
             .addCase(updateCase.rejected, (state, action) => {
                 state.updateCaseLoading = false;
                 state.error = action.payload?.detail || 'Failed to update case';
+            })
+            .addCase(fetchCourtCaseDetails.pending, (state) => {
+                state.fetchingCourtCase = true;
+                state.courtCaseError = null;
+            })
+            .addCase(fetchCourtCaseDetails.fulfilled, (state, action) => {
+                state.fetchingCourtCase = false;
+                state.courtCaseDetails = action.payload;
+            })
+            .addCase(fetchCourtCaseDetails.rejected, (state, action) => {
+                state.fetchingCourtCase = false;
+                state.courtCaseError = action.payload?.detail || 'Failed to fetch court case details';
             });
     },
 });
@@ -129,8 +146,11 @@ export const selectCasesLoading = (state: { cases: CasesState }) => state.cases.
 export const selectCasesError = (state: { cases: CasesState }) => state.cases.error;
 export const selectCreateCaseLoading = (state: { cases: CasesState }) => state.cases.createCaseLoading;
 export const selectUpdateCaseLoading = (state: { cases: CasesState }) => state.cases.updateCaseLoading;
+export const selectCourtCaseDetails = (state: { cases: CasesState }) => state.cases.courtCaseDetails;
+export const selectFetchingCourtCase = (state: { cases: CasesState }) => state.cases.fetchingCourtCase;
+export const selectCourtCaseError = (state: { cases: CasesState }) => state.cases.courtCaseError;
 
 // Export the fetchCase action so it can be imported in components
-export { fetchCase, fetchCases, createCase, updateCase };
+export { fetchCase, fetchCases, createCase, updateCase, fetchCourtCaseDetails };
 
 export default casesSlice.reducer;

@@ -114,3 +114,60 @@ async def update_case(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Could not update case: {str(e)}"
         )
+
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+import requests
+from typing import Dict, Optional
+
+# Import your settings where you'll store the API key
+from config import get_settings
+
+# Add a new endpoint
+@router.post("/fetch-court-details", response_model=Dict)
+async def fetch_court_details(
+    data: Dict = Body(...),
+    current_advocate = Depends(get_current_advocate),
+):
+    """
+    Fetches case details from the court API using a CNR number.
+    """
+    cnr = data.get("cnr")
+    if not cnr:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CNR number is required"
+        )
+    
+    settings = get_settings()
+    api_key = settings.COURT_API_KEY
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Court API key not configured"
+        )
+    
+    # Determine court type from CNR
+    court_type = "district-court"  # Default
+    if cnr.startswith("DLHC"):  # Example pattern for High Court
+        court_type = "high-court"
+    elif cnr.startswith("SC"):  # Example pattern for Supreme Court
+        court_type = "supreme-court"
+    
+    try:
+        response = requests.post(
+            f"https://apis.akshit.net/eciapi/17/{court_type}/case",
+            json={"cnr": cnr},
+            headers={
+                "Content-Type": "application/json",
+                "X-API-Key": api_key
+            }
+        )
+        
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching court details: {str(e)}"
+        )

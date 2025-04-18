@@ -1,9 +1,17 @@
 // src/components/CaseModal.tsx
 import React, { useState, useEffect } from 'react';
-import { X, User } from 'lucide-react';
+import { X, User, Search, AlertCircle, Info } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../store';
-import { Case, selectCreateCaseLoading, selectUpdateCaseLoading } from '../features/cases/caseSlices';
+import {
+    Case,
+    selectCreateCaseLoading,
+    selectUpdateCaseLoading,
+    fetchCourtCaseDetails,
+    selectCourtCaseDetails,
+    selectFetchingCourtCase,
+    selectCourtCaseError
+} from '../features/cases/caseSlices';
 import { createCase, updateCase } from '../features/cases/caseActions';
 import { fetchClients, selectClients, selectClientsLoading } from '../features/clients/clientSlice';
 
@@ -30,6 +38,14 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
     const clients = useSelector(selectClients);
     const clientsLoading = useSelector(selectClientsLoading);
 
+    // Get court case details from store
+    const courtCaseDetails = useSelector(selectCourtCaseDetails);
+    const fetchingCourtCase = useSelector(selectFetchingCourtCase);
+    const courtCaseError = useSelector(selectCourtCaseError);
+
+    // CNR input state
+    const [cnr, setCnr] = useState('');
+
     // Initial form state with auto-generated case number
     const initialFormState = {
         title: '',
@@ -37,7 +53,8 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
         description: '',
         status: 'draft', // Important: Use lowercase
         client_id: '', // Will be populated from dropdown
-        priority: 'Medium' as 'High' | 'Medium' | 'Low'
+        priority: 'Medium' as 'High' | 'Medium' | 'Low',
+        cnr: ''
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -60,8 +77,13 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                     description: caseData.description || '',
                     status: caseData.status || 'draft', // Use lowercase
                     client_id: caseData.client_id || '',
-                    priority: caseData.priority || 'Medium'
+                    priority: caseData.priority || 'Medium',
+                    cnr: caseData.cnr || ''
                 });
+                // Set CNR input if available
+                if (caseData.cnr) {
+                    setCnr(caseData.cnr);
+                }
             } else {
                 // Generate a new case number for new cases
                 setFormData({
@@ -69,12 +91,26 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                     case_number: generateCaseNumber(),
                     client_id: clients.length > 0 ? clients[0].id : '' // Set first client as default if available
                 });
+                // Clear CNR
+                setCnr('');
             }
             // Clear any errors
             setError(null);
             setClientValidationError(false);
         }
     }, [caseData, isOpen, clients]);
+
+    // Update form data when court case details are loaded
+    useEffect(() => {
+        if (courtCaseDetails) {
+            setFormData(prev => ({
+                ...prev,
+                title: courtCaseDetails.title || prev.title,
+                description: `${courtCaseDetails.details?.type || ''}\nActs & Sections: ${courtCaseDetails.actsAndSections?.acts || ''} ${courtCaseDetails.actsAndSections?.sections || ''}\nStatus: ${courtCaseDetails.status?.caseStage || ''}\n\n${prev.description || ''}`,
+                cnr: courtCaseDetails.cnr || prev.cnr,
+            }));
+        }
+    }, [courtCaseDetails]);
 
     if (!isOpen) return null;
 
@@ -88,6 +124,13 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
         // Clear client validation error when user selects a client
         if (name === 'client_id' && clientValidationError) {
             setClientValidationError(false);
+        }
+    };
+
+    // Handle CNR search
+    const handleSearchCNR = () => {
+        if (cnr.trim()) {
+            dispatch(fetchCourtCaseDetails(cnr.trim()));
         }
     };
 
@@ -114,6 +157,7 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                         title: formData.title,
                         description: formData.description,
                         status: formData.status,
+                        cnr: formData.cnr,
                         // We don't update client_id for existing cases
                     }
                 })).unwrap();
@@ -124,7 +168,10 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                     case_number: formData.case_number,
                     description: formData.description,
                     client_id: formData.client_id,
-                    status: formData.status
+                    status: formData.status,
+                    cnr: formData.cnr,
+                    // Include court case details if available
+                    ...(courtCaseDetails && { courtCaseDetails })
                 });
 
                 await dispatch(createCase({
@@ -133,6 +180,9 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                     description: formData.description,
                     client_id: formData.client_id,
                     status: formData.status,
+                    cnr: formData.cnr,
+                    // Include court case details if available
+                    ...(courtCaseDetails && { courtCaseDetails })
                 })).unwrap();
             }
             onClose();
@@ -180,6 +230,79 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* CNR Search Section */}
+                    <div className="mb-4">
+                        <div className={`p-4 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                            }`}>
+                            <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                                }`}>
+                                Search by CNR Number
+                            </h3>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Enter CNR Number (e.g., DLST020314162024)"
+                                    value={cnr}
+                                    onChange={(e) => setCnr(e.target.value)}
+                                    className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors duration-300 ${darkMode
+                                            ? 'bg-gray-800 border-gray-600 text-white'
+                                            : 'border-gray-300'
+                                        }`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleSearchCNR}
+                                    disabled={fetchingCourtCase || !cnr.trim()}
+                                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 flex items-center gap-1 ${darkMode
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-600'
+                                            : 'bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300'
+                                        }`}
+                                >
+                                    {fetchingCourtCase ? (
+                                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-1"></div>
+                                    ) : (
+                                        <Search size={16} />
+                                    )}
+                                    Search
+                                </button>
+                            </div>
+
+                            {courtCaseError && (
+                                <div className={`mt-2 p-2 rounded-md text-sm flex items-start gap-2 ${darkMode ? 'bg-red-900/30 text-red-200' : 'bg-red-50 text-red-700'
+                                    }`}>
+                                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                                    <span>{courtCaseError}</span>
+                                </div>
+                            )}
+
+                            {courtCaseDetails && (
+                                <div className={`mt-2 p-2 rounded-md text-sm ${darkMode ? 'bg-blue-900/30 text-blue-200' : 'bg-blue-50 text-blue-700'
+                                    }`}>
+                                    <div className="flex items-start gap-2 mb-1">
+                                        <Info size={16} className="mt-0.5 flex-shrink-0" />
+                                        <span className="font-medium">Case found: {courtCaseDetails.title}</span>
+                                    </div>
+                                    <p className="ml-6 text-xs">
+                                        Type: {courtCaseDetails.details?.type} |
+                                        Filing: {new Date(courtCaseDetails.details?.filingDate).toLocaleDateString()} |
+                                        Status: {courtCaseDetails.status?.caseStage}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setCnr('');
+                                            // Also clear the courtCaseDetails from redux if needed
+                                        }}
+                                        className={`ml-6 mt-2 text-xs underline ${darkMode ? 'text-blue-300' : 'text-blue-600'
+                                            }`}
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Client Selection Dropdown */}
                     <div>
                         <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
@@ -235,8 +358,8 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                             value={formData.title}
                             onChange={handleChange}
                             className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'border-gray-300'
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
                                 }`}
                             required
                         />
@@ -253,14 +376,35 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                             value={formData.case_number}
                             onChange={handleChange}
                             className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'border-gray-300'
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
                                 }`}
                             disabled={!!caseData} // Disable editing case number for existing cases
                             required
                         />
                         <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             Auto-generated for uniqueness
+                        </p>
+                    </div>
+
+                    {/* CNR Number field */}
+                    <div>
+                        <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                            CNR Number
+                        </label>
+                        <input
+                            type="text"
+                            name="cnr"
+                            value={formData.cnr}
+                            onChange={handleChange}
+                            className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
+                                }`}
+                        />
+                        <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Case Number Record (CNR) from the Court
                         </p>
                     </div>
 
@@ -274,10 +418,10 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                             value={formData.description}
                             onChange={handleChange}
                             className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'border-gray-300'
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
                                 }`}
-                            rows={3}
+                            rows={4}
                         />
                     </div>
 
@@ -291,8 +435,8 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                             value={formData.status}
                             onChange={handleChange}
                             className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'border-gray-300'
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
                                 }`}
                         >
                             <option value="draft">Draft</option>
@@ -312,8 +456,8 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                             value={formData.priority}
                             onChange={handleChange}
                             className={`w-full rounded-md border px-3 py-2 transition-colors duration-300 ${darkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'border-gray-300'
+                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                    : 'border-gray-300'
                                 }`}
                         >
                             <option value="High">High</option>
@@ -327,8 +471,8 @@ const CaseModal: React.FC<CaseModalProps> = ({ isOpen, onClose, caseData, darkMo
                             type="button"
                             onClick={onClose}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${darkMode
-                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                                 }`}
                             disabled={loading}
                         >

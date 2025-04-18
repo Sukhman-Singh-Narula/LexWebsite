@@ -72,7 +72,7 @@ export const fetchCase = createAsyncThunk<
 // Create a new case
 export const createCase = createAsyncThunk<
     Case,
-    Partial<Case>,
+    Partial<Case> & { courtCaseDetails?: any },
     { rejectValue: any }
 >(
     'cases/createCase',
@@ -85,14 +85,32 @@ export const createCase = createAsyncThunk<
 
             console.log('Creating new case with data:', caseData);
 
-            // Normalize the data for the API
-            const normalizedData = {
-                ...caseData,
+            // Extract court case details if available
+            const { courtCaseDetails, ...casePayload } = caseData;
+
+            // Prepare normalized data for the API
+            let normalizedData: any = {
+                ...casePayload,
                 // Ensure status is lowercase
-                status: caseData.status ? caseData.status.toLowerCase() : 'draft',
-                // Convert boolean/number fields if needed
-                // ...other normalizations as needed
+                status: casePayload.status ? casePayload.status.toLowerCase() : 'draft',
             };
+
+            // If court case details are available, include them
+            if (courtCaseDetails) {
+                normalizedData = {
+                    ...normalizedData,
+                    cnr: courtCaseDetails.cnr,
+                    court_case_title: courtCaseDetails.title,
+                    court_case_type: courtCaseDetails.details?.type,
+                    filing_number: courtCaseDetails.details?.filingNumber,
+                    registration_number: courtCaseDetails.details?.registrationNumber,
+                    court_status: courtCaseDetails.status,
+                    parties_details: courtCaseDetails.parties,
+                    acts_sections: courtCaseDetails.actsAndSections,
+                    fir_details: courtCaseDetails.firstInformationReport || {},
+                    court_history: courtCaseDetails.history || [],
+                };
+            }
 
             console.log('Normalized case creation payload:', JSON.stringify(normalizedData));
 
@@ -103,23 +121,6 @@ export const createCase = createAsyncThunk<
             return response.data;
         } catch (error: any) {
             console.error('Error creating case:', error);
-
-            // Enhanced error logging
-            if (error.response) {
-                console.error('Response status:', error.response.status);
-                console.error('Response data:', error.response.data);
-
-                // Log the request body if available
-                if (error.config && error.config.data) {
-                    try {
-                        const requestBody = JSON.parse(error.config.data);
-                        console.error('Request body sent:', requestBody);
-                    } catch (parseError) {
-                        console.error('Request body (non-JSON):', error.config.data);
-                    }
-                }
-            }
-
             return rejectWithValue(handleApiError(error));
         }
     }
@@ -148,6 +149,24 @@ export const updateCase = createAsyncThunk<
             return response.data;
         } catch (error: any) {
             console.error(`Error updating case ${id}:`, error);
+            return rejectWithValue(handleApiError(error));
+        }
+    }
+);
+
+// In frontend/src/features/cases/caseActions.ts
+export const fetchCourtCaseDetails = createAsyncThunk<
+    any,
+    string,
+    { rejectValue: any }
+>(
+    'cases/fetchCourtCaseDetails',
+    async (cnr, { rejectWithValue }) => {
+        try {
+            const response = await api.post('/cases/fetch-court-details', { cnr });
+            return response.data;
+        } catch (error: any) {
+            console.error('Error fetching court case details:', error);
             return rejectWithValue(handleApiError(error));
         }
     }

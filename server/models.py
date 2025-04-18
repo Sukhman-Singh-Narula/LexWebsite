@@ -112,12 +112,16 @@ class Case(Base, TimestampMixin):
     advocate_id = Column(UUID(as_uuid=True), ForeignKey('advocates.id'), nullable=False)
     client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id'), nullable=False)
     
-    case_number = Column(String, unique=True, nullable=False)
-    title = Column(String, nullable=False)
-    description = Column(Text)
-    status = Column(Enum(CaseStatus), default=CaseStatus.DRAFT)
-    filing_date = Column(DateTime(timezone=True))
-    
+    cnr = Column(String(100))
+    court_case_title = Column(String(255))
+    court_case_type = Column(String(100))
+    filing_number = Column(String(100))
+    registration_number = Column(String(100))
+    court_status = Column(JSONB, default={})
+    parties_details = Column(JSONB, default={})
+    acts_sections = Column(JSONB, default={})
+    fir_details = Column(JSONB, default={})
+    court_history = Column(JSONB, default=[])
     # Change 'metadata' to 'case_metadata' or another descriptive name
     case_metadata = Column(JSONB, default={})  # Renamed from 'metadata'
     
@@ -133,7 +137,17 @@ class CaseBase(BaseModel):
     case_number: str
     filing_date: Optional[datetime] = None
     case_metadata: Optional[Dict] = Field(default_factory=dict)  # Changed from metadata
-
+    cnr: Optional[str] = None
+    court_case_title: Optional[str] = None
+    court_case_type: Optional[str] = None
+    filing_number: Optional[str] = None
+    registration_number: Optional[str] = None
+    court_status: Optional[Dict] = Field(default_factory=dict)
+    parties_details: Optional[Dict] = Field(default_factory=dict)
+    acts_sections: Optional[Dict] = Field(default_factory=dict)
+    fir_details: Optional[Dict] = Field(default_factory=dict)
+    court_history: Optional[List] = Field(default_factory=list)
+    
 class CaseCreate(CaseBase):
     client_id: UUID4
 
