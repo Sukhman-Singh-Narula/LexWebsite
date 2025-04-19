@@ -1,6 +1,6 @@
 // src/features/cases/caseSlices.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import api from '../../services/api';
+
 
 // Import the case actions
 import { fetchCase, createCase, updateCase, fetchCases, fetchCourtCaseDetails } from './caseActions';
@@ -29,7 +29,7 @@ interface CasesState {
     error: string | null;
     createCaseLoading: boolean;
     updateCaseLoading: boolean;
-    courtCaseDetails: any | null;
+    courtCaseDetails: string | null;
     fetchingCourtCase: boolean;
     courtCaseError: string | null;
 }
