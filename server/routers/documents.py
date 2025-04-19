@@ -1,5 +1,5 @@
 # routers/documents.py
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, Response
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
@@ -7,9 +7,9 @@ from models import Document, DocumentType, DocumentStatus, Case, DocumentRespons
 from auth import get_current_advocate
 from services.document_service import DocumentService
 import uuid
-import boto3
 from config import get_settings
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
+
 router = APIRouter()
 document_service = DocumentService()
 settings = get_settings()
@@ -116,7 +116,7 @@ async def download_document(
     db: Session = Depends(get_db)
 ):
     """
-    Generates a temporary download URL for the document.
+    Generates a download URL for the document.
     Only accessible to advocates assigned to the corresponding case.
     """
     try:
@@ -127,26 +127,12 @@ async def download_document(
             db=db
         )
         
-        # Generate pre-signed URL for the document
-        s3 = boto3.client(
-            's3',
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            region_name=settings.AWS_REGION
-        )
+        # Get a signed URL for the document from Supabase
+        download_url = document_service.generate_download_url(document.s3_path)
         
-        # Generate URL that expires in 15 minutes
-        url = s3.generate_presigned_url(
-            'get_object',
-            Params={
-                'Bucket': settings.S3_BUCKET,
-                'Key': document.s3_path,
-                'ResponseContentDisposition': f'attachment; filename="{document.original_filename}"'
-            },
-            ExpiresIn=900  # 15 minutes
-        )
+        # Return the URL
+        return {"url": download_url}
         
-        return {"url": url}
     except HTTPException as e:
         # Re-raise HTTP exceptions from the service
         raise e
@@ -155,6 +141,7 @@ async def download_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating download URL: {str(e)}"
         )
+
 @router.get("/{document_id}/content")
 async def get_document_content(
     document_id: uuid.UUID,
@@ -171,7 +158,7 @@ async def get_document_content(
         db=db
     )
     
-    # Get file from S3
+    # Get file from Supabase Storage
     file_content = await document_service.get_document_content(document.s3_path)
     
     # Return file with appropriate headers
@@ -182,3 +169,20 @@ async def get_document_content(
             'Content-Disposition': f'inline; filename="{document.original_filename}"'
         }
     )
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(
+    document_id: uuid.UUID,
+    current_advocate = Depends(get_current_advocate),
+    db: Session = Depends(get_db)
+):
+    """
+    Deletes a document from storage and database.
+    Only accessible to advocates assigned to the corresponding case.
+    """
+    await document_service.delete_document(
+        document_id=document_id,
+        advocate_id=current_advocate.id,
+        db=db
+    )
+    return {}

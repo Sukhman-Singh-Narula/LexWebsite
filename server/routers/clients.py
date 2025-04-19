@@ -15,32 +15,6 @@ async def list_clients(
     db: Session = Depends(get_db)
 ):
     """
-    Lists clients associated with the current advocate.
-    """
-    # Query clients through cases relationship
-    # Get unique client_ids from the advocate's cases
-    case_client_ids = db.query(Case.client_id).filter(
-        Case.advocate_id == current_advocate.id
-    ).distinct().all()
-    
-    if case_client_ids:
-        # Extract the UUIDs from the result
-        client_ids = [client_id for (client_id,) in case_client_ids]
-        
-        # Query clients with these IDs
-        clients = db.query(Client).filter(Client.id.in_(client_ids)).all()
-    else:
-        # If the advocate has no cases yet, return an empty list
-        clients = []
-    
-    return clients
-
-@router.get("/", response_model=List[ClientResponse])
-async def list_clients(
-    current_advocate = Depends(get_current_advocate),
-    db: Session = Depends(get_db)
-):
-    """
     Lists all clients.
     In a production system, this would be filtered by advocate or firm.
     """
@@ -67,7 +41,36 @@ async def get_client(
         )
     
     return client
-
+@router.post("/", response_model=ClientResponse)
+async def create_client(
+    client_data: ClientCreate,
+    current_advocate = Depends(get_current_advocate),
+    db: Session = Depends(get_db)
+):
+    """
+    Creates a new client.
+    """
+    # Create a new client
+    client = Client(
+        email=client_data.email,
+        full_name=client_data.full_name,
+        phone=client_data.phone,
+        address=client_data.address,
+        company_name=client_data.company_name,
+        is_active=True
+    )
+    
+    try:
+        db.add(client)
+        db.commit()
+        db.refresh(client)
+        return client
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not create client: {str(e)}"
+        )
 @router.put("/{client_id}", response_model=ClientResponse)
 async def update_client(
     client_id: uuid.UUID,

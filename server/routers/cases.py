@@ -1,5 +1,5 @@
 # routers/cases.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
@@ -8,6 +8,11 @@ from auth import get_current_advocate  # Added this import
 import uuid
 from datetime import datetime
 from pydantic import BaseModel
+import requests
+from typing import Dict, Optional
+
+# Import your settings where you'll store the API key
+from config import get_settings
 
 # Create a custom model for creating cases without requiring client_id
 class CaseCreateWithOptionalClient(BaseModel):
@@ -114,13 +119,6 @@ async def update_case(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Could not update case: {str(e)}"
         )
-
-from fastapi import APIRouter, Depends, HTTPException, status, Body
-import requests
-from typing import Dict, Optional
-
-# Import your settings where you'll store the API key
-from config import get_settings
 
 # Add a new endpoint
 @router.post("/fetch-court-details", response_model=Dict)

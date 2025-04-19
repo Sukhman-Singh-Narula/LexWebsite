@@ -8,13 +8,16 @@ from config import get_settings
 settings = get_settings()
 
 # Create the database URL using validated settings
+# For Supabase, we need to specify SSL mode
+connection_args = {"sslmode": "require"}
 DATABASE_URL = URL.create(
     drivername="postgresql",
     username=settings.DB_USER,
     password=settings.DB_PASSWORD,
     host=settings.DB_HOST,
     port=settings.DB_PORT,
-    database=settings.DB_NAME
+    database=settings.DB_NAME,
+    query=connection_args  # Required for Supabase
 )
 
 # Create the SQLAlchemy engine with proper PostgreSQL settings
@@ -24,7 +27,7 @@ engine = create_engine(
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
     pool_recycle=settings.DB_POOL_RECYCLE,
-    echo=False  # You could also move this to settings if you want
+    echo=False
 )
 
 # The rest of your code remains the same
