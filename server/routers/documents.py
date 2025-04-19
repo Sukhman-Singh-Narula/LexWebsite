@@ -141,7 +141,6 @@ async def download_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating download URL: {str(e)}"
         )
-
 @router.get("/{document_id}/content")
 async def get_document_content(
     document_id: uuid.UUID,
